@@ -1,0 +1,7 @@
+/build/
+/.idea/
+/.gradle/
+/kotlin-js-store/
+/results/
+/work/
+/workqueue.json
