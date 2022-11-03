@@ -15,7 +15,7 @@ import java.util.regex.Pattern
 val JAVA_FILENAME: String = System.getProperty("SOLUTION_FILENAME", "MyKuromasuSolver.java")
 
 val RESET_SCRIPT = System.getProperty("RESET_SCRIPT", "reset.sh")
-val RUN_SCRIPT = System.getProperty("RESET_SCRIPT", "run.sh")
+val RUN_SCRIPT = System.getProperty("RUN_SCRIPT", "run.sh")
 
 val REGEX_SUCCESS_RATE: Pattern = System.getProperty("RE_SUCCESS_RATE", "success (.*?) %").let {
     Pattern.compile(it)
@@ -102,10 +102,10 @@ class WorkerQueue(entries: List<Task> = listOf()) : Runnable {
 
                 if (status == 0) {
                     val m = REGEX_SUCCESS_RATE.matcher(stdout)
-                    val successRate = if (m.find())
+                    val score = if (m.find())
                         m.group(1).toDouble()
                     else 0.0
-                    leaderboard.announce(Entry(task.pseudonym, time.toInt(), successRate))
+                    leaderboard.announce(Entry(task.pseudonym, time.toInt(), score))
                 }
             } catch (e: Exception) {
                 status = -1
@@ -119,7 +119,9 @@ class WorkerQueue(entries: List<Task> = listOf()) : Runnable {
         }
 
         while (true) {
-            val task: Task? = queue.poll(60, TimeUnit.SECONDS)
+            val task: Task? = synchronized(this) {
+                queue.poll(60, TimeUnit.SECONDS)
+            }
             if (task != null) {
                 execute(task)
                 save()

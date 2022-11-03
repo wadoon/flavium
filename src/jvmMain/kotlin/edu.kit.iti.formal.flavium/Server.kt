@@ -43,10 +43,10 @@ fun HTML.index() {
                 form("/submit", FormEncType.multipartFormData, method = FormMethod.post) {
                     label {
                         +"Upload your solution (Java file):"
-                    }
-                    fileInput {
-                        name = "javaFile"
-                        required = true
+                        fileInput {
+                            name = "javaFile"
+                            required = true
+                        }
                     }
                     submitInput {}
                 }
@@ -54,17 +54,21 @@ fun HTML.index() {
 
             section("leaderboard") {
                 h2 { +"Leaderboard" }
+                p("warning") {
+                    +"Leaderboard is sorted firstly by the score (successful solving of sat/unsat instances), then after the run time."
+                }
                 table {
+                    role = "grid"
                     tr {
                         th { +"Pseudonym" }
-                        th { +"Success Rate" }
+                        th { +"Score" }
                         th { +"Time" }
                     }
 
                     leaderboard.entries().forEach {
                         tr {
                             td { +it.pseudonym }
-                            td { +"%3.3f".format(it.successRate) }
+                            td { +"%3.3f".format(it.score) }
                             td { +"%d".format(it.time) }
                         }
                     }
@@ -156,9 +160,10 @@ fun HTML.detail(result: Result) {
     }
 }
 
+val PORT = System.getProperty("PORT", "8080").toInt()
 
 fun main() {
-    embeddedServer(Netty, port = 8080, host = "127.0.0.1") {
+    embeddedServer(Netty, port = PORT) {
         routing {
             get("/") {
                 call.respondHtml(HttpStatusCode.OK, HTML::index)

@@ -20,7 +20,7 @@ fun loadLeaderboard(): Leaderboard {
 
 class Leaderboard(private val _entries: MutableList<Entry>) {
     private val comparator by lazy {
-        val sr = Comparator.comparingDouble<Entry> { it.successRate }
+        val sr = Comparator.comparingDouble<Entry> { it.score }
         val time = Comparator.comparingInt<Entry> { it.time }
         sr.thenComparing(time)
     }
@@ -41,4 +41,4 @@ class Leaderboard(private val _entries: MutableList<Entry>) {
 
 
 @Serializable
-data class Entry(val pseudonym: String, val time: Int, val successRate: Double)
+data class Entry(val pseudonym: String, val time: Int, val score: Double)
