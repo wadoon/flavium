@@ -35,9 +35,9 @@ val RESULT_FOLDER: File = File(System.getProperty("RESULT_FOLDER", "results"))
         mkdirs()
     }
 
-fun loadWorkerQueue(): WorkerQueue {
+fun loadWorkerQueue(pseudonyms : MutableSet<String>): WorkerQueue {
     val wq = if (WORK_QUEUE.exists()) {
-        WorkerQueue(Json.decodeFromString(WORK_QUEUE.readText()))
+        WorkerQueue(Json.decodeFromString(WORK_QUEUE.readText()), NameGenerator(pseudonyms))
     } else
         WorkerQueue()
     val t = Thread(wq)
@@ -52,14 +52,14 @@ data class Task(val id: String, val pseudonym: String, val javaCode: String)
 data class Result(val id: String, val pseudonym: String, val stdout: String, val stderr: String, val status: Int)
 
 
-class WorkerQueue(entries: List<Task> = listOf()) : Runnable {
+class WorkerQueue(entries: List<Task> = listOf(), nameGeneratorParam : NameGenerator = NameGenerator(mutableSetOf())) : Runnable {
     private val queue = LinkedBlockingDeque(entries)
+    private val nameGenerator = nameGeneratorParam;
 
     @Synchronized
     fun emit(javaCode: String): Pair<Task, Int> {
-        val t = Task(UUID.randomUUID().toString(), "TODO", javaCode)
+        val t = Task(UUID.randomUUID().toString(), nameGenerator.getName(), javaCode)
         queue.add(t)
-        save()
         return t to queue.size
     }
 
@@ -124,8 +124,8 @@ class WorkerQueue(entries: List<Task> = listOf()) : Runnable {
             }
             if (task != null) {
                 execute(task)
-                save()
             }
+            save()
         }
     }
 }

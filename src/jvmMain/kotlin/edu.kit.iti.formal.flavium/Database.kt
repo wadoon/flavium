@@ -28,6 +28,8 @@ class Leaderboard(private val _entries: MutableList<Entry>) {
     @Synchronized
     fun entries(): List<Entry> = ArrayList(_entries).apply { sortWith(comparator) }
 
+    fun getPseudonyms(): MutableSet<String> =  (_entries.map {it.pseudonym}).toMutableSet()
+
     @Synchronized
     fun announce(entry: Entry) {
         _entries.add(entry)
