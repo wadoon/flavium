@@ -61,7 +61,7 @@ class WorkerQueue(
 
     @Synchronized
     fun emit(javaCode: String): Pair<Task, Int> {
-        val t = Task(UUID.randomUUID().toString(), nameGenerator.randomName, javaCode)
+        val t = Task(UUID.randomUUID().toString(), nameGenerator.getRandomName(), javaCode)
         queue.add(t)
         return t to queue.size
     }
@@ -70,8 +70,6 @@ class WorkerQueue(
     private fun save() = WORK_QUEUE.writeText(Json.encodeToString(queue.toList()))
 
     override fun run() {
-
-
         fun execute(task: Task) {
             var stdout = ""
             var stderr = ""

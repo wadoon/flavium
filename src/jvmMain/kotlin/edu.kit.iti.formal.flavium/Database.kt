@@ -1,11 +1,10 @@
 package edu.kit.iti.formal.flavium
 
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.io.File
-import kotlin.Comparator
 
 val LEADERBOARD = File(System.getProperty("LEADERBOARD_FILE", "leaderboard.json"))
 
@@ -28,7 +27,7 @@ class Leaderboard(private val _entries: MutableList<Entry>) {
     @Synchronized
     fun entries(): List<Entry> = ArrayList(_entries).apply { sortWith(comparator) }
 
-    fun getPseudonyms(): MutableSet<String> =  (_entries.map {it.pseudonym}).toMutableSet()
+    fun getPseudonyms() = _entries.map { it.pseudonym }.toMutableSet()
 
     @Synchronized
     fun announce(entry: Entry) {

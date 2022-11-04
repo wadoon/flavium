@@ -205,10 +205,8 @@ class RandomName(val takenNames: MutableSet<String>) {
         "wolverine", "wombat", "wren", "yak", "zebra"
     )
 
-    val randomName: String
-        get() = getRandomName(" ")
 
-    fun getRandomName(separator: String): String {
+    fun getRandomName(separator: String = " "): String {
         val candidate =
             (ADJECTIVES[random.nextInt(ADJECTIVES.size)] + separator + ANIMALS[random.nextInt(ANIMALS.size)]).lowercase(
                 Locale.getDefault()
