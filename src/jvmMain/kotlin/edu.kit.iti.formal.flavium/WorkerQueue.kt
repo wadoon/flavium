@@ -84,29 +84,35 @@ class WorkerQueue(
                     .command(RESET_SCRIPT, WORK_FOLDER.absolutePath)
                     .redirectError(ProcessBuilder.Redirect.INHERIT)
                     .redirectOutput(ProcessBuilder.Redirect.INHERIT)
-                val p = pb.start()
-                p.waitFor()
+                val processPrepare = pb.start()
+                status = processPrepare.waitFor()
 
+                stdout = processPrepare.inputReader().readText()
+                stderr = processPrepare.errorReader().readText()
 
-                val pbrun = ProcessBuilder()
-                    .command(RUN_SCRIPT, WORK_FOLDER.absolutePath)
-                    .redirectError(ProcessBuilder.Redirect.PIPE)
-                    .redirectOutput(ProcessBuilder.Redirect.PIPE)
+                if(status==0) {
+                    val pbrun = ProcessBuilder()
+                        .command(RUN_SCRIPT, WORK_FOLDER.absolutePath)
+                        .redirectError(ProcessBuilder.Redirect.PIPE)
+                        .redirectOutput(ProcessBuilder.Redirect.PIPE)
 
-                val start = System.currentTimeMillis()
-                val run = pbrun.start()
-                status = run.waitFor()
-                val time = System.currentTimeMillis() - start
+                    val start = System.currentTimeMillis()
+                    val run = pbrun.start()
+                    status = run.waitFor()
+                    val time = System.currentTimeMillis() - start
 
-                stdout = run.inputReader().readText()
-                stderr = run.errorReader().readText()
+                    stdout += run.inputReader().readText()
+                    stderr += run.errorReader().readText()
 
-                if (status == 0) {
-                    val m = REGEX_SUCCESS_RATE.matcher(stdout)
-                    val score = if (m.find())
-                        m.group(1).toDouble()
-                    else 0.0
-                    leaderboard.announce(Entry(task.id, task.pseudonym, time.toInt(), score))
+                    if (status == 0) {
+                        val m = REGEX_SUCCESS_RATE.matcher(stdout)
+                        val score = if (m.find())
+                            m.group(1).toDouble()
+                        else 0.0
+                        leaderboard.announce(Entry(task.id, task.pseudonym, time.toInt(), score))
+                    }
+                } else {
+                    stderr += "\nRun aborted due to error during preparation!"
                 }
             } catch (e: Exception) {
                 status = -1
