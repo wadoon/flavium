@@ -10,12 +10,16 @@ import io.ktor.server.netty.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.util.date.*
 import io.ktor.util.pipeline.*
 import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.IOException
+import java.util.*
 import java.util.regex.Pattern
+
 
 val leaderboard = loadLeaderboard()
 val workerQueue = loadWorkerQueue(leaderboard.getPseudonyms())
@@ -26,7 +30,8 @@ fun main() {
     embeddedServer(Netty, port = PORT) {
         routing {
             get("/") {
-                call.respondHtml(HttpStatusCode.OK) { IndexPage().render(this) }
+                val submissions: List<Submission> = call.request.submissions()
+                call.respondHtml(HttpStatusCode.OK) { IndexPage(submissions).render(this) }
             }
             post("/submit") { this.submitController() }
             get("/results") { detailsController() }
@@ -68,6 +73,7 @@ private suspend fun PipelineContext<Unit, ApplicationCall>.detailsController() {
 
 private suspend fun PipelineContext<Unit, ApplicationCall>.submitController() {
     val multipart = call.receiveMultipart()
+    val submissions = call.request.submissions().toMutableList()
     try {
         multipart.forEachPart { partData ->
             when (partData) {
@@ -79,6 +85,11 @@ private suspend fun PipelineContext<Unit, ApplicationCall>.submitController() {
                 is PartData.FileItem -> {
                     val content = partData.provider().readText()
                     val (task, pos) = workerQueue.emit(content)
+                    submissions.add(Submission(task.id, task.pseudonym, Date().time))
+                    val cookie =
+                        Cookie("submissions", Json.encodeToString(submissions),
+                            expires = GMTDate(0, 0, 0, 1, Month.FEBRUARY, 2023))
+                    call.response.cookies.append(cookie)
                     call.respondHtml(HttpStatusCode.OK) { SubmitPage(task, pos).render(this) }
                 }
 
@@ -91,3 +102,8 @@ private suspend fun PipelineContext<Unit, ApplicationCall>.submitController() {
         call.application.environment.log.error(ex.stackTraceToString())
     }
 }
+
+private fun ApplicationRequest.submissions(): List<Submission> =
+    cookies["submissions"]?.let {
+        Json.decodeFromString(it)
+    } ?: listOf()

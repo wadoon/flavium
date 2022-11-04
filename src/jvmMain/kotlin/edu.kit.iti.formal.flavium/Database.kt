@@ -42,4 +42,4 @@ class Leaderboard(private val _entries: MutableList<Entry>) {
 
 
 @Serializable
-data class Entry(val pseudonym: String, val time: Int, val score: Double)
+data class Entry(val id: String, val pseudonym: String, val time: Int, val score: Double)

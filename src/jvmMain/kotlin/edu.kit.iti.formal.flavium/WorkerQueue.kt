@@ -106,7 +106,7 @@ class WorkerQueue(
                     val score = if (m.find())
                         m.group(1).toDouble()
                     else 0.0
-                    leaderboard.announce(Entry(task.pseudonym, time.toInt(), score))
+                    leaderboard.announce(Entry(task.id, task.pseudonym, time.toInt(), score))
                 }
             } catch (e: Exception) {
                 status = -1
