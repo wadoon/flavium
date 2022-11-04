@@ -18,7 +18,7 @@ import java.io.IOException
 import java.util.regex.Pattern
 
 val leaderboard = loadLeaderboard()
-val workerQueue = loadWorkerQueue()
+val workerQueue = loadWorkerQueue(leaderboard.getPseudonyms())
 
 
 fun HTML.index() {
@@ -185,6 +185,7 @@ fun main() {
                     }
                 } catch (ex: Exception) {
                     call.respond(HttpStatusCode.InternalServerError, "Error")
+                    call.application.environment.log.error(ex.stackTraceToString())
                 }
             }
             get("/results") {
