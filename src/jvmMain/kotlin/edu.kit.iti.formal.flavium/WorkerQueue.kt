@@ -59,7 +59,6 @@ class WorkerQueue(entries: List<Task> = listOf()) : Runnable {
     fun emit(javaCode: String): Pair<Task, Int> {
         val t = Task(UUID.randomUUID().toString(), "TODO", javaCode)
         queue.add(t)
-        save()
         return t to queue.size
     }
 
