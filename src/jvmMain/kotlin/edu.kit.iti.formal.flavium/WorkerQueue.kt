@@ -15,7 +15,7 @@ import java.util.regex.Pattern
 val JAVA_FILENAME: String = System.getProperty("SOLUTION_FILENAME", "MyKuromasuSolver.java")
 
 val RESET_SCRIPT = System.getProperty("RESET_SCRIPT", "reset.sh")
-val RUN_SCRIPT = System.getProperty("RESET_SCRIPT", "run.sh")
+val RUN_SCRIPT = System.getProperty("RUN_SCRIPT", "run.sh")
 
 val REGEX_SUCCESS_RATE: Pattern = System.getProperty("RE_SUCCESS_RATE", "success (.*?) %").let {
     Pattern.compile(it)
@@ -35,9 +35,9 @@ val RESULT_FOLDER: File = File(System.getProperty("RESULT_FOLDER", "results"))
         mkdirs()
     }
 
-fun loadWorkerQueue(): WorkerQueue {
+fun loadWorkerQueue(pseudonyms : MutableSet<String>): WorkerQueue {
     val wq = if (WORK_QUEUE.exists()) {
-        WorkerQueue(Json.decodeFromString(WORK_QUEUE.readText()))
+        WorkerQueue(Json.decodeFromString(WORK_QUEUE.readText()), NameGenerator(pseudonyms))
     } else
         WorkerQueue()
     val t = Thread(wq)
@@ -52,12 +52,13 @@ data class Task(val id: String, val pseudonym: String, val javaCode: String)
 data class Result(val id: String, val pseudonym: String, val stdout: String, val stderr: String, val status: Int)
 
 
-class WorkerQueue(entries: List<Task> = listOf()) : Runnable {
+class WorkerQueue(entries: List<Task> = listOf(), nameGeneratorParam : NameGenerator = NameGenerator(mutableSetOf())) : Runnable {
     private val queue = LinkedBlockingDeque(entries)
+    private val nameGenerator = nameGeneratorParam;
 
     @Synchronized
     fun emit(javaCode: String): Pair<Task, Int> {
-        val t = Task(UUID.randomUUID().toString(), "TODO", javaCode)
+        val t = Task(UUID.randomUUID().toString(), nameGenerator.getName(), javaCode)
         queue.add(t)
         save()
         return t to queue.size
