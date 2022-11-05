@@ -18,6 +18,7 @@ import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.IOException
 import java.util.*
+import java.util.function.Predicate
 import java.util.regex.Pattern
 
 
@@ -42,7 +43,7 @@ fun main() {
     }.start(wait = true)
 }
 
-val uuidTest = Pattern.compile("[a-f0-9-]+").asMatchPredicate()
+val uuidTest: Predicate<String> = Pattern.compile("[a-f0-9-]+").asMatchPredicate()
 
 private suspend fun PipelineContext<Unit, ApplicationCall>.detailsController() {
     val id = this.context.request.queryParameters["id"]
@@ -83,7 +84,7 @@ private suspend fun PipelineContext<Unit, ApplicationCall>.submitController() {
                 }
 
                 is PartData.FileItem -> {
-                    var content = partData.streamProvider().reader().readText()
+                    val content = partData.streamProvider().reader().readText()
                     val (task, pos) = workerQueue.emit(content)
                     submissions.add(Submission(task.id, task.pseudonym, Date().time))
                     val cookie =

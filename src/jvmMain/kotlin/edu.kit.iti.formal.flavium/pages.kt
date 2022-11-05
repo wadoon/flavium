@@ -28,22 +28,16 @@ abstract class BaseLayout : Template<HTML> {
             main("container") {
                 header {
                     h1 {
-                        img {
-                            src = "/static/kolosseum.webp"
-                            style = "height :1em; margin-right:1em;"
+                        a("/") {
+                            img {
+                                src = "/static/kolosseum.webp"
+                                style = "height :1em; margin-right:1em;"
+                            }
+                            +"Flavium"
                         }
-                        +"Flavium"
                         span("sub") {
                             +"Test and compare your solution of the SAT exercise."
                         }
-                    }
-                    p {
-                        +"""This service tries to be data-minimalistic and privacy compliant as possible. Therefore we limited the user input to minimal 
-                             require information and avoid personal data everywhere. The only required data is your solution (Java file). Please avoid 
-                              also to add personal data in this file. The Java file is stored until the benchmark is processed."""
-                        br { }
-                        +"""Cookie-Disclaimer: When uploading a solution, this site uses a cookie to store your submission id. 
-                            This allows you to easily see your position and access the log of your submitted solutions."""
                     }
                 }
                 content()
@@ -67,6 +61,14 @@ data class Submission(val id: String, val pseudonym: String, val time: Long)
 
 class IndexPage(val submissions: List<Submission> = listOf()) : BaseLayout() {
     override fun MAIN.content() {
+        p {
+            +"""This service tries to be data-minimalistic and privacy compliant as possible. Therefore we limited the user input to minimal 
+                             require information and avoid personal data everywhere. The only required data is your solution (Java file). Please avoid 
+                              also to add personal data in this file. The Java file is stored until the benchmark is processed."""
+            br { }
+            +"""Cookie-Disclaimer: When uploading a solution, this site uses a cookie to store your submission id. 
+                            This allows you to easily see your position and access the log of your submitted solutions."""
+        }
         sectionUpload()
         sectionSubmissions()
         sectionLeaderboard()
@@ -78,7 +80,7 @@ class IndexPage(val submissions: List<Submission> = listOf()) : BaseLayout() {
                 h3 { +"Your submissions" }
                 ol {
                     val lb = leaderboard.entries()
-                    submissions.sortedWith(compareBy { it.time }).forEach {
+                    submissions.sortedWith(compareByDescending { it.time }).forEach {
                         val rank = lb.rank(it)
                         li("submission") {
                             a("/results?id=${it.id}") {

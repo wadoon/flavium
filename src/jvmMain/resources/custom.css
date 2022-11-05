@@ -9,6 +9,10 @@ header span.sub {
 
 
 .submission {
-    margin: 1ex;
-    padding: 1ex;
+
+}
+
+footer {
+    border-top: 1px #ccc solid;
+    padding-top: 1ex;
 }
