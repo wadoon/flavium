@@ -82,15 +82,15 @@ class WorkerQueue(
                 // prepare stage
                 val pb = ProcessBuilder()
                     .command(RESET_SCRIPT, WORK_FOLDER.absolutePath)
-                    .redirectError(ProcessBuilder.Redirect.INHERIT)
-                    .redirectOutput(ProcessBuilder.Redirect.INHERIT)
+                    .redirectError(ProcessBuilder.Redirect.PIPE)
+                    .redirectOutput(ProcessBuilder.Redirect.PIPE)
                 val processPrepare = pb.start()
                 status = processPrepare.waitFor()
 
                 stdout = processPrepare.inputReader().readText()
                 stderr = processPrepare.errorReader().readText()
 
-                if(status==0) {
+                if (status == 0) {
                     val pbrun = ProcessBuilder()
                         .command(RUN_SCRIPT, WORK_FOLDER.absolutePath)
                         .redirectError(ProcessBuilder.Redirect.PIPE)
@@ -126,9 +126,7 @@ class WorkerQueue(
         }
 
         while (true) {
-            val task: Task? = synchronized(this) {
-                queue.poll(60, TimeUnit.SECONDS)
-            }
+            val task: Task? = queue.poll(60, TimeUnit.SECONDS)
             if (task != null) {
                 execute(task)
                 save()

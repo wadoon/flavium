@@ -76,15 +76,15 @@ class IndexPage(val submissions: List<Submission> = listOf()) : BaseLayout() {
         if (submissions.isNotEmpty()) {
             section("submissions") {
                 h3 { +"Your submissions" }
-                div {
+                ol {
                     val lb = leaderboard.entries()
                     submissions.sortedWith(compareBy { it.time }).forEach {
                         val rank = lb.rank(it)
-                        span("submission") {
-                            a("/details?id=${it.id}") {
+                        li("submission") {
+                            a("/results?id=${it.id}") {
                                 +it.time.asDateTime()
                                 span {
-                                    +"Rank:  ${if (rank < 0) "n/a" else rank + 1}"
+                                    +" Current Rank:  ${if (rank < 0) "n/a" else rank + 1} "
                                 }
                                 if (rank == 0) faIconSolid("fa-crown")
                             }
@@ -149,7 +149,7 @@ class IndexPage(val submissions: List<Submission> = listOf()) : BaseLayout() {
                             +"%3.3f".format(it.score)
                         }
                         td(classes = "right") {
-                            +"%d".format(it.time)
+                            +"%10.3f seconds".format(it.time / 1000.0)
                         }
                     }
                 }

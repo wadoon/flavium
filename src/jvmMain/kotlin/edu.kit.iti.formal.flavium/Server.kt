@@ -83,14 +83,17 @@ private suspend fun PipelineContext<Unit, ApplicationCall>.submitController() {
                 }
 
                 is PartData.FileItem -> {
-                    val content = partData.provider().readText()
+                    var content = partData.streamProvider().reader().readText()
                     val (task, pos) = workerQueue.emit(content)
                     submissions.add(Submission(task.id, task.pseudonym, Date().time))
                     val cookie =
-                        Cookie("submissions", Json.encodeToString(submissions),
-                            expires = GMTDate(0, 0, 0, 1, Month.FEBRUARY, 2023))
+                        Cookie(
+                            "submissions", Json.encodeToString(submissions),
+                            expires = GMTDate(0, 0, 0, 1, Month.FEBRUARY, 2023)
+                        )
                     call.response.cookies.append(cookie)
                     call.respondHtml(HttpStatusCode.OK) { SubmitPage(task, pos).render(this) }
+                    partData.dispose()
                 }
 
                 is PartData.BinaryItem -> Unit

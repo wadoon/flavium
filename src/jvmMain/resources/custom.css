@@ -6,3 +6,9 @@ header span.sub {
 .right {
     text-align: right;
 }
+
+
+.submission {
+    margin: 1ex;
+    padding: 1ex;
+}
