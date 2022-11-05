@@ -3,7 +3,6 @@ package edu.kit.iti.formal.flavium
 import io.ktor.server.html.*
 import kotlinx.html.*
 import kotlinx.serialization.Serializable
-import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -118,7 +117,11 @@ class IndexPage(val submissions: List<Submission> = listOf()) : BaseLayout() {
                     }
                 }
                 div {
-                    +"Note:"
+                    +"Note: Please do not submit any personal data. More information on the processing can be found in the"
+                    a("https://github.com/wadoon/flavium") {
+                        i("fa-brands fa-github") {}
+                        +" readme."
+                    }
                 }
             }
         }

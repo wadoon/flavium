@@ -13,7 +13,7 @@ Compile it using gradle:
 $ gradle shadowJar
 ```
 
-Use the shadowJar (which contains all dependencies) together with a start script (e.g., [kuromasu/server.sh](server.sh)) to start up the server. 
+Use the shadowJar (which contains all dependencies) together with a start script (e.g., [server.sh](kuromasu/server.sh)) to start up the server. 
 
 
 ## Internals
@@ -38,4 +38,10 @@ Following data exists:
 Each submission also creates an entry in the cookie. Inside the cookie we store the pseudonym, internal id and upload
 time for each submission.  
 
+**Processing** Each submission is evaluated exclusively on the same host as the server. This means, that only one evaluation runs at the same time. Currently, we have no distributed worker queue. Evaluation of a submission happens in the following steps:
 
+1. Submission is received and stored at the bottom of the task queue.
+2. The uploaded submission is established  in the configured work directory
+3. The reset script is activated given the work directory. This script established the environment and deletes previous results or files. 
+4. The run script then executes the final benchmark. Its execution time is the runtime in the leaderboard. The output of the run script is searched for the regex of the score. `stdout` and `stderr` are captured and stored for later inspection. 
+5. Entry in the leaderboard is created.
