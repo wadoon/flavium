@@ -15,4 +15,4 @@ JAVAARGS="-Xmx4g -Xms1g -cp $CLASSPATH:."
 
 time \
      timeout $TO \
-     java $JAVAARGS edu.kit.kastel.formal.kuromasu.KuromasuTest
+     java $JAVAARGS edu.kit.iti.formal.kuromasu.SafeRunner
