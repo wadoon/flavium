@@ -4,7 +4,7 @@ import sys
 import subprocess
 import re
 
-regex = r"-> ([a-zA-Z0-9.]+)"
+regex = r"-> ([a-zA-Z0-9.\$]+)"
 
 def filter_prefix(seq, prefixes):
     for item in seq:
@@ -40,7 +40,8 @@ def run(classfile):
         "java.lang",
         "java.util",
         "org.sat4j",
-        "java.io.PrintStream"
+        "java.io.PrintStream",
+        "MyKuromasuSolver$"
     ]
 
     allowed_classes = set(filter_prefix(used_classes, allowed_prefixes))
