@@ -22,6 +22,10 @@ if [ $? -ne 0 ]; then
 	exit "110";
 fi 
 
+if javap -v $CLASSNAME.class | grep -q "java/lang/Class.forName"; then
+    echo "Though shall not use Class.forName"
+    exit 111
+fi
 
 if $path/classCheck.py $CLASSNAME.class; then
 	exit 0
