@@ -8,7 +8,7 @@ java \
     -DSOLUTION_FILENAME=MyKuromasuSolver.java\
     -DRESET_SCRIPT="$(pwd)/reset.sh"\
     -DRUN_SCRIPT="$(pwd)/run.sh"\
-    -DREGEX_SUCCESS_RATE='Your score is (\\d+\.\\d*)' \
+    -DRE_SUCCESS_RATE='Your score is (\d+\.\d*)' \
     -DWORK_FOLDER="$(pwd)/work/"\
     -DRESULT_FOLDER="$DATA/data/results/"\
     -DWORK_QUEUE="$DATA/workqueue.json"\
