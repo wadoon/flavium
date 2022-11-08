@@ -26,6 +26,7 @@ def run(classfile):
         "java.io.File",
         "java.nio",
         "java.net",
+        "java.lang.reflect"
     }
 
     hard_forbidden = list(filter_prefix(used_classes, hard_forbidden_prefixes))
