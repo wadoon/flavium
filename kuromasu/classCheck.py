@@ -14,19 +14,22 @@ def filter_prefix(seq, prefixes):
                 continue
 
 
-def run(classfile):
-    output = subprocess.getoutput(f"jdeps -v {classfile}")
+def run(classloc):
+    output = subprocess.getoutput(f"jdeps -v "+classloc)
     matches = re.finditer(regex, output, re.MULTILINE)
     used_classes = sorted(map(lambda m: m.group(1), matches))
-    used_classes.remove("java.base")
-    used_classes.remove("not")
+    used_classes = filter(lambda x: x!="java.base", used_classes)
+    used_classes = filter(lambda x: x!="not", used_classes)
+    used_classes = filter(lambda x: x!="MyKuromasuSolver", used_classes)
+    used_classes = list(filter(lambda x: x!="MyKuromasuSolver.class", used_classes))
 
     # if found error!
     hard_forbidden_prefixes = {
         "java.io.File",
         "java.nio",
         "java.net",
-        "java.lang.reflect"
+        "java.lang.reflect",
+        "java.lang.ClassLoader"
     }
 
     hard_forbidden = list(filter_prefix(used_classes, hard_forbidden_prefixes))
