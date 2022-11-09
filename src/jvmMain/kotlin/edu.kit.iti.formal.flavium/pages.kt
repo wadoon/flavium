@@ -61,9 +61,9 @@ data class Submission(val id: String, val pseudonym: String, val time: Long)
 class IndexPage(val submissions: List<Submission> = listOf()) : BaseLayout() {
     override fun MAIN.content() {
         p {
-            +"""This service tries to be data-minimalistic and privacy compliant as possible. Therefore we limited the user input to minimal 
-                             require information and avoid personal data everywhere. The only required data is your solution (Java file). Please avoid 
-                              also to add personal data in this file. The Java file is stored until the benchmark is processed."""
+            +"""This service tries to be as data-minimalistic and privacy compliant as possible. Therefore we limit the user input to the minimally 
+                             required information and avoid personal data everywhere. The only required data is your solution (Java file). Please also avoid 
+                              to add personal data in this file. The Java file is stored until the benchmark is processed."""
             br { }
             +"""Cookie-Disclaimer: When uploading a solution, this site uses a cookie to store your submission id. 
                             This allows you to easily see your position and access the log of your submitted solutions."""
