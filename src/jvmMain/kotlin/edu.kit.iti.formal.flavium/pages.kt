@@ -78,7 +78,7 @@ class IndexPage(val submissions: List<Submission> = listOf()) : BaseLayout() {
             section("submissions") {
                 h3 { +"Your submissions" }
                 ol {
-                    val lb = leaderboard.entries()
+                    val lb = Leaderboard.entries()
                     submissions.sortedWith(compareByDescending { it.time }).forEach {
                         val rank = lb.rank(it)
                         li("submission") {
@@ -146,7 +146,7 @@ class IndexPage(val submissions: List<Submission> = listOf()) : BaseLayout() {
                     th(classes = "right") { +"Time" }
                 }
 
-                leaderboard.entries().forEachIndexed { index, it ->
+                Leaderboard.entries().forEachIndexed { index, it ->
                     tr {
                         td(classes = "right") { +"$index" }
                         td { +it.pseudonym }

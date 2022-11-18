@@ -1,7 +1,5 @@
 package edu.kit.iti.formal.flavium
 
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
@@ -35,21 +33,26 @@ val RESULT_FOLDER: File = File(System.getProperty("RESULT_FOLDER", "results"))
         mkdirs()
     }
 
-fun loadWorkerQueue(pseudonyms: MutableSet<String>): WorkerQueue {
-    val wq = if (WORK_QUEUE.exists()) {
-        WorkerQueue(Json.decodeFromString(WORK_QUEUE.readText()), RandomName(pseudonyms))
-    } else
-        WorkerQueue()
+fun startWorkerQueue(): WorkerQueue {
+    val em = Database.sessionFactory.createEntityManager()
+    val cr = em.criteriaBuilder.createQuery(String::class.java)
+    val root = cr.from(Task::class.java)
+    cr.select(root.get("pseudonym"))
+    val p1 = em.createQuery(cr).resultList
+    val p2 = Leaderboard.entries().map { it.pseudonym }
+    val pseudonyms = (p1 + p2).toMutableSet()
+
+    val crTasks = em.criteriaBuilder.createQuery(Task::class.java)
+    crTasks.from(Task::class.java)
+    val tasks = em.createQuery(crTasks).resultList
+    em.close()
+
+    val wq = WorkerQueue(tasks, RandomName(pseudonyms))
+
     val t = Thread(wq)
     t.start()
     return wq
 }
-
-@Serializable
-data class Task(val id: String, val pseudonym: String, val javaCode: String)
-
-@Serializable
-data class Result(val id: String, val pseudonym: String, val stdout: String, val stderr: String, val status: Int)
 
 
 class WorkerQueue(
@@ -109,7 +112,7 @@ class WorkerQueue(
                         val score = if (m.find())
                             m.group(1).toDouble()
                         else 0.0
-                        leaderboard.announce(Entry(task.id, task.pseudonym, time.toInt(), score))
+                        Leaderboard.announce(Entry(task.id, task.pseudonym, time.toInt(), score))
                     }
                 } else {
                     stderr += "\nRun aborted due to error during preparation!"

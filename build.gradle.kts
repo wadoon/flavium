@@ -45,6 +45,10 @@ kotlin {
                 implementation("org.jetbrains.kotlinx:kotlinx-html-jvm:0.7.2")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.4.1")
                 implementation("ch.qos.logback:logback-classic:1.4.4")
+
+                // implementation("org.hsqldb:hsqldb:2.7.1")
+                implementation("org.apache.derby:derby:10.16.1.1")
+                implementation("org.hibernate.orm:hibernate-core:6.1.5.Final")
             }
         }
         val jvmTest by getting

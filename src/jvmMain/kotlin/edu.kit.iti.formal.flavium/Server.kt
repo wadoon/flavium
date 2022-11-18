@@ -21,9 +21,7 @@ import java.util.*
 import java.util.function.Predicate
 import java.util.regex.Pattern
 
-
-val leaderboard = loadLeaderboard()
-val workerQueue = loadWorkerQueue(leaderboard.getPseudonyms())
+val workerQueue = startWorkerQueue()
 
 val PORT = System.getProperty("PORT", "8080").toInt()
 
