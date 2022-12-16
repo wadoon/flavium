@@ -1,139 +1,127 @@
 package edu.kit.iti.formal.flavium
 
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.neq
+import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.transactions.transaction
 import java.io.File
 import java.io.PrintWriter
 import java.io.StringWriter
-import java.util.*
-import java.util.concurrent.LinkedBlockingDeque
 import java.util.concurrent.TimeUnit
-import java.util.regex.Pattern
-
-val JAVA_FILENAME: String = System.getProperty("SOLUTION_FILENAME", "MyKuromasuSolver.java")
-
-val RESET_SCRIPT = System.getProperty("RESET_SCRIPT", "reset.sh")
-val RUN_SCRIPT = System.getProperty("RUN_SCRIPT", "run.sh")
-
-val REGEX_SUCCESS_RATE: Pattern = System.getProperty("RE_SUCCESS_RATE", "success (.*?) %").let {
-    Pattern.compile(it)
-}
-
-val WORK_FOLDER = File(System.getProperty("WORK_FOLDER", "work"))
-    .absoluteFile
-    .apply {
-        mkdirs()
-    }
-val WORK_QUEUE: File = File(System.getProperty("WORK_QUEUE", "workqueue.json"))
-    .absoluteFile
-
-val RESULT_FOLDER: File = File(System.getProperty("RESULT_FOLDER", "results"))
-    .absoluteFile
-    .apply {
-        mkdirs()
-    }
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 fun startWorkerQueue(): WorkerQueue {
-    val em = Database.sessionFactory.createEntityManager()
-    val cr = em.criteriaBuilder.createQuery(String::class.java)
-    val root = cr.from(Task::class.java)
-    cr.select(root.get("pseudonym"))
-    val p1 = em.createQuery(cr).resultList
-    val p2 = Leaderboard.entries().map { it.pseudonym }
-    val pseudonyms = (p1 + p2).toMutableSet()
-
-    val crTasks = em.criteriaBuilder.createQuery(Task::class.java)
-    crTasks.from(Task::class.java)
-    val tasks = em.createQuery(crTasks).resultList
-    em.close()
-
-    val wq = WorkerQueue(tasks, RandomName(pseudonyms))
-
+    val wq = WorkerQueue()
     val t = Thread(wq)
     t.start()
     return wq
 }
 
 
-class WorkerQueue(
-    entries: List<Task> = listOf(),
-    private val nameGenerator: RandomName = RandomName(mutableSetOf())
-) :
-    Runnable {
-    private val queue = LinkedBlockingDeque(entries)
+class WorkerQueue() : Runnable {
+    private val lock = ReentrantLock()
+    private val barrier = lock.newCondition()
 
-    @Synchronized
-    fun emit(javaCode: String): Pair<Task, Int> {
-        val t = Task(UUID.randomUUID().toString(), nameGenerator.getRandomName(), javaCode)
-        queue.add(t)
-        return t to queue.size
+    fun wakeUp() {
+        lock.withLock {
+            barrier.signal()
+        }
     }
 
-    @Synchronized
-    private fun save() = WORK_QUEUE.writeText(Json.encodeToString(queue.toList()))
-
     override fun run() {
-        fun execute(task: Task) {
+        fun execute(task: Job) {
+            val tenantConfig = config.tenants.find { it.id == task.tenant.value }
+
             var stdout = ""
             var stderr = ""
             var status: Int
+            var userScore: Double = -1.0
+            var runtime: Long = Long.MAX_VALUE
 
-            try {
-                // fill in the java file
-                File(WORK_FOLDER, JAVA_FILENAME).writeText(task.javaCode)
+            if (tenantConfig == null) {
+                stderr = "Tenant with '${task.tenant.value}' not found. Server configuration error."
+                status = 1
+            } else {
+                try {
+                    // fill in the java file
+                    File(tenantConfig.workFolder, tenantConfig.uploadFilename).writeText(task.fileContent)
 
-                // prepare stage
-                val pb = ProcessBuilder()
-                    .command(RESET_SCRIPT, WORK_FOLDER.absolutePath)
-                    .redirectError(ProcessBuilder.Redirect.PIPE)
-                    .redirectOutput(ProcessBuilder.Redirect.PIPE)
-                val processPrepare = pb.start()
-                status = processPrepare.waitFor()
-
-                stdout = processPrepare.inputReader().readText()
-                stderr = processPrepare.errorReader().readText()
-
-                if (status == 0) {
-                    val pbrun = ProcessBuilder()
-                        .command(RUN_SCRIPT, WORK_FOLDER.absolutePath)
+                    // prepare stage
+                    val pb = ProcessBuilder()
+                        .command(tenantConfig.resetScript, tenantConfig.workFolder.toString())
                         .redirectError(ProcessBuilder.Redirect.PIPE)
                         .redirectOutput(ProcessBuilder.Redirect.PIPE)
+                    val processPrepare = pb.start()
+                    status = processPrepare.waitFor()
 
-                    val start = System.currentTimeMillis()
-                    val run = pbrun.start()
-                    status = run.waitFor()
-                    val time = System.currentTimeMillis() - start
-
-                    stdout += run.inputReader().readText()
-                    stderr += run.errorReader().readText()
+                    stdout = processPrepare.inputReader().readText()
+                    stderr = processPrepare.errorReader().readText()
 
                     if (status == 0) {
-                        val m = REGEX_SUCCESS_RATE.matcher(stdout)
-                        val score = if (m.find())
-                            m.group(1).toDouble()
-                        else 0.0
-                        Leaderboard.announce(Entry(task.id, task.pseudonym, time.toInt(), score))
+                        val pbrun = ProcessBuilder()
+                            .command(tenantConfig.runScript, tenantConfig.workFolder.toString())
+                            .redirectError(ProcessBuilder.Redirect.PIPE)
+                            .redirectOutput(ProcessBuilder.Redirect.PIPE)
+
+                        val start = System.currentTimeMillis()
+                        val run = pbrun.start()
+                        status = run.waitFor()
+                        runtime = System.currentTimeMillis() - start
+
+                        stdout += run.inputReader().readText()
+                        stderr += run.errorReader().readText()
+
+                        if (status == 0) {
+                            val m = tenantConfig.regexScore.matcher(stdout)
+                            userScore = if (m.find())
+                                m.group(1).toDouble()
+                            else 0.0
+                        }
+                    } else {
+                        stderr += "\nRun aborted due to error during preparation!"
                     }
-                } else {
-                    stderr += "\nRun aborted due to error during preparation!"
+                } catch (e: Exception) {
+                    status = 1
+                    userScore = -1.0
+                    val sw = StringWriter()
+                    e.printStackTrace(PrintWriter(sw))
+                    stderr += sw.toString()
                 }
-            } catch (e: Exception) {
-                status = -1
-                val sw = StringWriter()
-                e.printStackTrace(PrintWriter(sw))
-                stderr += sw.toString()
             }
 
-            File(RESULT_FOLDER, task.id + ".json")
-                .writeText(Json.encodeToString(Result(task.id, task.pseudonym, stdout, stderr, status)))
+            transaction {
+                task.stdout = stdout
+                task.stderr = stderr
+                task.status = status
+                require(status >= 0)
+                Leaderboard.insert {
+                    it[id] = task.id
+                    it[pseudonym] = task.pseudonym
+                    it[time] = runtime.toInt()
+                    it[score] = userScore
+                }
+            }
         }
 
-        while (true) {
-            val task: Task? = queue.poll(60, TimeUnit.SECONDS)
-            if (task != null) {
-                execute(task)
-                save()
+        try {
+            while (true) {
+                val task: Job? = getNextOpenJob()
+                if (task != null) {
+                    execute(task)
+                } else {
+                    lock.withLock {
+                        barrier.await(10, TimeUnit.SECONDS)
+                    }
+                }
             }
+        } catch (e: Exception) {
+            LOGGER.error("WorkerQueue died!", e)
+        }
+    }
+
+    private fun getNextOpenJob(): Job? {
+        return transaction {
+            Job.find(Jobs.status neq -1).minByOrNull { it.rollingNumber }
         }
     }
 }
