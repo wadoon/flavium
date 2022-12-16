@@ -7,6 +7,7 @@ import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.PrintWriter
 import java.io.StringWriter
+import java.nio.file.Files
 import java.util.*
 import java.util.concurrent.LinkedBlockingDeque
 import java.util.concurrent.TimeUnit
@@ -91,18 +92,20 @@ class WorkerQueue(
                 stderr = processPrepare.errorReader().readText()
 
                 if (status == 0) {
+                    val tmpFile = File(WORK_FOLDER.absolutePath, "stdout.out");
+                    val tmpErrFile = File(WORK_FOLDER.absolutePath, "stderr.out");
                     val pbrun = ProcessBuilder()
                         .command(RUN_SCRIPT, WORK_FOLDER.absolutePath)
-                        .redirectError(ProcessBuilder.Redirect.PIPE)
-                        .redirectOutput(ProcessBuilder.Redirect.PIPE)
+                        .redirectError(ProcessBuilder.Redirect.to(tmpErrFile))
+                        .redirectOutput(ProcessBuilder.Redirect.to(tmpFile))
 
                     val start = System.currentTimeMillis()
                     val run = pbrun.start()
                     status = run.waitFor()
                     val time = System.currentTimeMillis() - start
 
-                    stdout += run.inputReader().readText()
-                    stderr += run.errorReader().readText()
+                    stdout += tmpFile.readText()
+                    stderr += tmpErrFile.readText()
 
                     if (status == 0) {
                         val m = REGEX_SUCCESS_RATE.matcher(stdout)
