@@ -64,7 +64,7 @@ lateinit var workerQueue: WorkerQueue
 val LOGGER = LoggerFactory.getLogger("app")
 
 fun main() {
-    require(config.tenants.isNotEmpty()) { "You need atleast one tennant/site." }
+    require(config.tenants.isNotEmpty()) { "You need atleast one tenant/site." }
     LOGGER.info("Database vendor: {}, version: {}", db.vendor, db.version)
 
     transaction {
@@ -142,10 +142,15 @@ private suspend fun PipelineContext<Unit, ApplicationCall>.submitController(tena
                     val content = partData.streamProvider().reader().readText()
 
                     val (task, pos) = transaction {
+                        val tenantEntity = Tenants.select(
+                            Tenants.id eq tenant
+                        ).map {it[Tenants.id]}[0]
                         val task = Job.new {
                             this.pseudonym = findFreePseudonym(tenant)
                             this.fileContent = content
+                            this.tenant = tenantEntity
                         }
+                        task.flush()
                         workerQueue.wakeUp()
                         val pos = Jobs.select(
                             (Jobs.status eq -1) and

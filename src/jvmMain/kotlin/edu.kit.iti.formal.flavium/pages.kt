@@ -3,6 +3,7 @@ package edu.kit.iti.formal.flavium
 import io.ktor.server.html.*
 import kotlinx.html.*
 import kotlinx.serialization.Serializable
+import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.text.SimpleDateFormat
 import java.util.*
@@ -74,7 +75,7 @@ class IndexPage(
 
     private val leaderboardEntries: List<Entry> by lazy {
         transaction {
-            Entry.find { Leaderboard.tennant eq tenantConfig.id }
+            Entry.find { (Leaderboard.tenant eq tenantConfig.id) and (Leaderboard.score greaterEq 0.0) }
                 .sortedWith(comparator)
         }
     }

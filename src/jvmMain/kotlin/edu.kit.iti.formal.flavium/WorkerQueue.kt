@@ -1,5 +1,6 @@
 package edu.kit.iti.formal.flavium
 
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.neq
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -9,6 +10,7 @@ import java.io.StringWriter
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
+import kotlin.io.path.createTempFile
 
 fun startWorkerQueue(): WorkerQueue {
     val wq = WorkerQueue()
@@ -46,30 +48,32 @@ class WorkerQueue() : Runnable {
                     // fill in the java file
                     File(tenantConfig.workFolder, tenantConfig.uploadFilename).writeText(task.fileContent)
 
+                    val tmpFile = createTempFile().toFile()
+                    val tmpErrFile = createTempFile().toFile()
                     // prepare stage
                     val pb = ProcessBuilder()
                         .command(tenantConfig.resetScript, tenantConfig.workFolder.toString())
-                        .redirectError(ProcessBuilder.Redirect.PIPE)
-                        .redirectOutput(ProcessBuilder.Redirect.PIPE)
+                        .redirectError(ProcessBuilder.Redirect.to(tmpErrFile))
+                        .redirectOutput(ProcessBuilder.Redirect.to(tmpFile))
                     val processPrepare = pb.start()
                     status = processPrepare.waitFor()
 
-                    stdout = processPrepare.inputReader().readText()
-                    stderr = processPrepare.errorReader().readText()
+                    stdout += tmpFile.readText()
+                    stderr += tmpErrFile.readText()
 
                     if (status == 0) {
                         val pbrun = ProcessBuilder()
                             .command(tenantConfig.runScript, tenantConfig.workFolder.toString())
-                            .redirectError(ProcessBuilder.Redirect.PIPE)
-                            .redirectOutput(ProcessBuilder.Redirect.PIPE)
+                            .redirectError(ProcessBuilder.Redirect.to(tmpErrFile))
+                            .redirectOutput(ProcessBuilder.Redirect.to(tmpFile))
 
                         val start = System.currentTimeMillis()
                         val run = pbrun.start()
                         status = run.waitFor()
                         runtime = System.currentTimeMillis() - start
 
-                        stdout += run.inputReader().readText()
-                        stderr += run.errorReader().readText()
+                        stdout += tmpFile.readText()
+                        stderr += tmpErrFile.readText()
 
                         if (status == 0) {
                             val m = tenantConfig.regexScore.matcher(stdout)
@@ -99,6 +103,7 @@ class WorkerQueue() : Runnable {
                     it[pseudonym] = task.pseudonym
                     it[time] = runtime.toInt()
                     it[score] = userScore
+                    it[tenant] = task.tenant
                 }
             }
         }
@@ -107,6 +112,7 @@ class WorkerQueue() : Runnable {
             while (true) {
                 val task: Job? = getNextOpenJob()
                 if (task != null) {
+                    LOGGER.debug("Found new job")
                     execute(task)
                 } else {
                     lock.withLock {
@@ -120,8 +126,9 @@ class WorkerQueue() : Runnable {
     }
 
     private fun getNextOpenJob(): Job? {
+        LOGGER.debug("Fetching new jobs")
         return transaction {
-            Job.find(Jobs.status neq -1).minByOrNull { it.rollingNumber }
+            Job.find(Jobs.status eq -1).minByOrNull { it.rollingNumber }
         }
     }
 }

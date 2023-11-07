@@ -23,7 +23,7 @@ object Leaderboard : UUIDTable() {
     val pseudonym = varchar("pseudonym", 128)
     val time = integer("time")
     val score = double("score")
-    val tennant = reference("tenant", Tenants)
+    val tenant = reference("tenant", Tenants)
 }
 
 class Entry(id: EntityID<UUID>) : UUIDEntity(id) {
@@ -41,11 +41,11 @@ object Jobs : UUIDTable() {
 
     val rollingNumber = integer("rolling_number").autoIncrement()
 
-    val stdout = Jobs.text("stdout")
-    val stderr = Jobs.text("stderr")
+    val stdout = Jobs.text("stdout").default("AWAITING EXECUTION...")
+    val stderr = Jobs.text("stderr").default("AWAITING EXECUTION...")
     val status = Jobs.integer("status").default(-1)
 
-    val tenant = Jobs.reference("tennant", Tenants)
+    val tenant = Jobs.reference("tenant", Tenants)
 }
 
 class Job(id: EntityID<UUID>) : UUIDEntity(id) {
