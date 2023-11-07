@@ -12,6 +12,7 @@ import java.util.*
 import java.util.concurrent.LinkedBlockingDeque
 import java.util.concurrent.TimeUnit
 import java.util.regex.Pattern
+import kotlin.io.path.createTempFile
 
 val JAVA_FILENAME: String = System.getProperty("SOLUTION_FILENAME", "MyKuromasuSolver.java")
 
@@ -80,20 +81,20 @@ class WorkerQueue(
                 // fill in the java file
                 File(WORK_FOLDER, JAVA_FILENAME).writeText(task.javaCode)
 
+                val tmpFile = createTempFile().toFile()
+                val tmpErrFile = createTempFile().toFile()
                 // prepare stage
                 val pb = ProcessBuilder()
                     .command(RESET_SCRIPT, WORK_FOLDER.absolutePath)
-                    .redirectError(ProcessBuilder.Redirect.PIPE)
-                    .redirectOutput(ProcessBuilder.Redirect.PIPE)
+                    .redirectError(ProcessBuilder.Redirect.to(tmpErrFile))
+                    .redirectOutput(ProcessBuilder.Redirect.to(tmpFile))
                 val processPrepare = pb.start()
                 status = processPrepare.waitFor()
 
-                stdout = processPrepare.inputReader().readText()
-                stderr = processPrepare.errorReader().readText()
+                stdout += tmpFile.readText()
+                stderr += tmpErrFile.readText()
 
                 if (status == 0) {
-                    val tmpFile = File(WORK_FOLDER.absolutePath, "stdout.out");
-                    val tmpErrFile = File(WORK_FOLDER.absolutePath, "stderr.out");
                     val pbrun = ProcessBuilder()
                         .command(RUN_SCRIPT, WORK_FOLDER.absolutePath)
                         .redirectError(ProcessBuilder.Redirect.to(tmpErrFile))
