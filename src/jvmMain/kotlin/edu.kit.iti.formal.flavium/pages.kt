@@ -22,7 +22,7 @@ abstract class BaseLayout : Template<HTML> {
             styleLink("/static/facss/brands.min.css")
             styleLink("/static/facss/solid.min.css")
             styleLink("/static/custom.css")
-            title("Flavium: Test and compare your solution of the SAT exercise.")
+            title("Flavium: Test and compare your solutions.")
         }
         body(classes = javaClass.simpleName) {
             main("container") {
@@ -36,7 +36,7 @@ abstract class BaseLayout : Template<HTML> {
                             +"Flavium"
                         }
                         span("sub") {
-                            +"Test and compare your solution of the SAT exercise."
+                            +"Test and compare your solutions."
                         }
                     }
                 }
@@ -65,6 +65,9 @@ class IndexPage(
 ) : BaseLayout() {
 
     override fun MAIN.content() {
+        h2 {
+            unsafe {  +tenantConfig.title }
+        }
         p {
             unsafe { +tenantConfig.introduction }
         }
