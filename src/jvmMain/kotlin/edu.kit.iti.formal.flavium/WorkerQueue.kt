@@ -7,10 +7,12 @@ import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.PrintWriter
 import java.io.StringWriter
+import java.nio.file.Files
 import java.util.*
 import java.util.concurrent.LinkedBlockingDeque
 import java.util.concurrent.TimeUnit
 import java.util.regex.Pattern
+import kotlin.io.path.createTempFile
 
 val JAVA_FILENAME: String = System.getProperty("SOLUTION_FILENAME", "MyKuromasuSolver.java")
 
@@ -79,30 +81,32 @@ class WorkerQueue(
                 // fill in the java file
                 File(WORK_FOLDER, JAVA_FILENAME).writeText(task.javaCode)
 
+                val tmpFile = createTempFile().toFile()
+                val tmpErrFile = createTempFile().toFile()
                 // prepare stage
                 val pb = ProcessBuilder()
                     .command(RESET_SCRIPT, WORK_FOLDER.absolutePath)
-                    .redirectError(ProcessBuilder.Redirect.PIPE)
-                    .redirectOutput(ProcessBuilder.Redirect.PIPE)
+                    .redirectError(ProcessBuilder.Redirect.to(tmpErrFile))
+                    .redirectOutput(ProcessBuilder.Redirect.to(tmpFile))
                 val processPrepare = pb.start()
                 status = processPrepare.waitFor()
 
-                stdout = processPrepare.inputReader().readText()
-                stderr = processPrepare.errorReader().readText()
+                stdout += tmpFile.readText()
+                stderr += tmpErrFile.readText()
 
                 if (status == 0) {
                     val pbrun = ProcessBuilder()
                         .command(RUN_SCRIPT, WORK_FOLDER.absolutePath)
-                        .redirectError(ProcessBuilder.Redirect.PIPE)
-                        .redirectOutput(ProcessBuilder.Redirect.PIPE)
+                        .redirectError(ProcessBuilder.Redirect.to(tmpErrFile))
+                        .redirectOutput(ProcessBuilder.Redirect.to(tmpFile))
 
                     val start = System.currentTimeMillis()
                     val run = pbrun.start()
                     status = run.waitFor()
                     val time = System.currentTimeMillis() - start
 
-                    stdout += run.inputReader().readText()
-                    stderr += run.errorReader().readText()
+                    stdout += tmpFile.readText()
+                    stderr += tmpErrFile.readText()
 
                     if (status == 0) {
                         val m = REGEX_SUCCESS_RATE.matcher(stdout)
