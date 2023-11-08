@@ -1,0 +1,25 @@
+tenants:
+  - id: sat
+    title: SAT-Excercise WS22/23
+    introduction: >
+      <p>This service tries to be as data-minimalistic and privacy compliant as possible. Therefore we limit the user input to the minimally 
+         required information and avoid personal data everywhere. The only required data is your solution (Java file). Please also avoid 
+         to add personal data in this file. The Java file is stored until the benchmark is processed.
+      </p>
+      <br />
+      <p>
+        Cookie-Disclaimer: When uploading a solution, this site uses a cookie to store your submission id. 
+        This allows you to easily see your position and access the log of your submitted solutions."""
+      </p>
+    leaderboardHints: >
+      Leaderboard is sorted firstly by the score (successful solving of sat/unsat instances), then after the run time.
+
+    privacyNote: >
+      Note: Please do not submit any personal data. More information on the processing can be found in 
+      the <a href="https://github.com/wadoon/flavium"><i class="fa-brands fa-github"></i> readme.</a>.
+
+    uploadFilename: MyKuromasuSolver.java
+    resetScript: reset.sh
+    runScript: "run.sh"
+    regexScore: "success (.*?) %"
+    workFolder: "work"

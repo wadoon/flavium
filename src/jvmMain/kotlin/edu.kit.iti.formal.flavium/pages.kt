@@ -3,11 +3,12 @@ package edu.kit.iti.formal.flavium
 import io.ktor.server.html.*
 import kotlinx.html.*
 import kotlinx.serialization.Serializable
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.transactions.transaction
 import java.text.SimpleDateFormat
 import java.util.*
 
 abstract class BaseLayout : Template<HTML> {
-    val content = Placeholder<MAIN>()
     override fun HTML.apply() {
         lang = "en"
         head {
@@ -21,7 +22,7 @@ abstract class BaseLayout : Template<HTML> {
             styleLink("/static/facss/brands.min.css")
             styleLink("/static/facss/solid.min.css")
             styleLink("/static/custom.css")
-            title("Flavium: Test and compare your solution of the SAT exercise.")
+            title("Flavium: Test and compare your solutions.")
         }
         body(classes = javaClass.simpleName) {
             main("container") {
@@ -35,7 +36,7 @@ abstract class BaseLayout : Template<HTML> {
                             +"Flavium"
                         }
                         span("sub") {
-                            +"Test and compare your solution of the SAT exercise."
+                            +"Test and compare your solutions."
                         }
                     }
                 }
@@ -58,29 +59,38 @@ abstract class BaseLayout : Template<HTML> {
 @Serializable
 data class Submission(val id: String, val pseudonym: String, val time: Long)
 
-class IndexPage(val submissions: List<Submission> = listOf()) : BaseLayout() {
+class IndexPage(
+    private val tenantConfig: TenantConfig,
+    private val submissions: List<Submission> = listOf()
+) : BaseLayout() {
+
     override fun MAIN.content() {
+        h2 {
+            unsafe {  +tenantConfig.title }
+        }
         p {
-            +"""This service tries to be as data-minimalistic and privacy compliant as possible. Therefore we limit the user input to the minimally 
-                             required information and avoid personal data everywhere. The only required data is your solution (Java file). Please also avoid 
-                              to add personal data in this file. The Java file is stored until the benchmark is processed."""
-            br { }
-            +"""Cookie-Disclaimer: When uploading a solution, this site uses a cookie to store your submission id. 
-                            This allows you to easily see your position and access the log of your submitted solutions."""
+            unsafe { +tenantConfig.introduction }
         }
         sectionUpload()
         sectionSubmissions()
         sectionLeaderboard()
     }
 
+    private val leaderboardEntries: List<Entry> by lazy {
+        transaction {
+            Entry.find { (Leaderboard.tenant eq tenantConfig.id) and (Leaderboard.score greaterEq 0.0) }
+                .sortedWith(comparator)
+        }
+    }
+
+
     private fun MAIN.sectionSubmissions() {
         if (submissions.isNotEmpty()) {
             section("submissions") {
                 h3 { +"Your submissions" }
                 ol {
-                    val lb = leaderboard.entries()
                     submissions.sortedWith(compareByDescending { it.time }).forEach {
-                        val rank = lb.rank(it)
+                        val rank = leaderboardEntries.rank(it)
                         li("submission") {
                             a("/results?id=${it.id}") {
                                 +it.time.asDateTime()
@@ -117,11 +127,7 @@ class IndexPage(val submissions: List<Submission> = listOf()) : BaseLayout() {
                     }
                 }
                 div {
-                    +"Note: Please do not submit any personal data. More information on the processing can be found in the"
-                    a("https://github.com/wadoon/flavium") {
-                        i("fa-brands fa-github") {}
-                        +" readme."
-                    }
+                    unsafe { +tenantConfig.privacyNote }
                 }
             }
         }
@@ -134,9 +140,9 @@ class IndexPage(val submissions: List<Submission> = listOf()) : BaseLayout() {
                 i("fa-solid fa-ranking-star") {}
                 +" Leaderboard"
             }
-            p("warning") {
-                +"Leaderboard is sorted firstly by the score (successful solving of sat/unsat instances), then after the run time."
-            }
+
+            p("leaderboard-hints") { unsafe { +tenantConfig.leaderboardHints } }
+
             table {
                 role = "grid"
                 tr {
@@ -146,7 +152,7 @@ class IndexPage(val submissions: List<Submission> = listOf()) : BaseLayout() {
                     th(classes = "right") { +"Time" }
                 }
 
-                leaderboard.entries().forEachIndexed { index, it ->
+                leaderboardEntries.forEachIndexed { index, it ->
                     tr {
                         td(classes = "right") { +"$index" }
                         td { +it.pseudonym }
@@ -167,7 +173,7 @@ fun FlowOrPhrasingContent.faIconSolid(icon: String) {
     span("fa-solid $icon") { +"" }
 }
 
-private fun List<Entry>.rank(s: Submission): Int = indexOfFirst { it.id == s.id }
+private fun List<Entry>.rank(s: Submission): Int = indexOfFirst { it.id.value.toString() == s.id }
 
 private fun Long.asDateTime(): String {
     val f = SimpleDateFormat("yyyy-MM-dd hh:mm:ss")
@@ -184,7 +190,7 @@ class ErrorPage(private val message: String) : BaseLayout() {
 }
 
 
-class SubmitPage(private val task: Task, private val pos: Int) : BaseLayout() {
+class SubmitPage(private val task: Job, private val pos: Long) : BaseLayout() {
     override fun MAIN.content() {
         section("") {
             h3 { +"Upload successful" }
@@ -198,7 +204,7 @@ class SubmitPage(private val task: Task, private val pos: Int) : BaseLayout() {
     }
 }
 
-class DetailPage(private val result: Result) : BaseLayout() {
+class DetailPage(private val result: Job) : BaseLayout() {
     override fun MAIN.content() {
         span { +"Id: ${result.id}" }
         br { }
@@ -212,4 +218,10 @@ class DetailPage(private val result: Result) : BaseLayout() {
         h3 { +"stderr" }
         pre { +result.stderr }
     }
+}
+
+private val comparator by lazy {
+    val sr = Comparator.comparingDouble<Entry> { -it.score }
+    val time = Comparator.comparingInt<Entry> { it.time }
+    sr.thenComparing(time)
 }

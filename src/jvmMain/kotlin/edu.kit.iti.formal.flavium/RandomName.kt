@@ -2,7 +2,7 @@ package edu.kit.iti.formal.flavium
 
 import java.util.*
 
-class RandomName(val takenNames: MutableSet<String>) {
+class RandomName(val takenNames: Set<String>) {
     private val random = Random()
 
     private val ADJECTIVES = arrayOf(
@@ -211,6 +211,6 @@ class RandomName(val takenNames: MutableSet<String>) {
             (ADJECTIVES[random.nextInt(ADJECTIVES.size)] + separator + ANIMALS[random.nextInt(ANIMALS.size)]).lowercase(
                 Locale.getDefault()
             )
-        return if (candidate in takenNames) getRandomName(separator) else candidate.also { takenNames.add(candidate) }
+        return if (candidate in takenNames) getRandomName(separator) else candidate
     }
 }
