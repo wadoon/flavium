@@ -29,6 +29,7 @@ import org.slf4j.event.Level
 import java.io.File
 import java.io.PrintWriter
 import java.nio.file.Paths
+import java.time.LocalTime
 import java.util.*
 import java.util.function.Predicate
 import java.util.regex.Pattern
@@ -160,10 +161,12 @@ private suspend fun PipelineContext<Unit, ApplicationCall>.submitController(tena
                     }
 
                     submissions.add(Submission(task.id.value.toString(), task.pseudonym, Date().time))
+
                     val cookie =
                         Cookie(
                             "submissions", Json.encodeToString(submissions),
-                            expires = GMTDate(0, 0, 0, 1, Month.FEBRUARY, 2023)
+                            // Expires in 6 months
+                            expires = GMTDate(LocalTime.now().plusHours(183*24) .toNanoOfDay())
                         )
                     call.response.cookies.append(cookie)
                     call.respondHtml(HttpStatusCode.OK) { SubmitPage(task, pos).render(this) }
