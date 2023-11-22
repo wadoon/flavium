@@ -154,7 +154,7 @@ class IndexPage(
 
                 leaderboardEntries.forEachIndexed { index, it ->
                     tr {
-                        td(classes = "right") { +"$index" }
+                        td(classes = "right") { +"${index + 1}" }
                         td { +it.pseudonym }
                         td(classes = "right") {
                             +"%3.3f".format(it.score)
